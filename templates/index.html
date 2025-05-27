@@ -1,0 +1,26 @@
+
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>多因子選股系統</title>
+  <style>
+    body { font-family: "Microsoft JhengHei", sans-serif; margin: 2rem auto; max-width: 800px; font-size: 1.2rem; }
+    h1 { text-align: center; font-size: 2rem; }
+    label, input { margin: 0.5rem 0; }
+    input[type="number"] { width: 5rem; }
+    .form-group { margin-bottom: 1rem; }
+    button { margin-top: 1rem; padding: 0.5rem 1rem; font-size: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>📊 多因子選股系統</h1>
+  <form action="/analyze" method="post">
+    <div class="form-group">PE &lt; <input type="number" name="pe_ratio" step="0.1" value="15" /> , PB &lt; <input type="number" name="pb_ratio" step="0.1" value="1.5" /></div>
+    <div class="form-group">EPS 成長率 &gt; <input type="number" name="eps_growth" step="0.1" value="10" /> % , ROE &gt; <input type="number" name="roe" step="0.1" value="15" /> %</div>
+    <div class="form-group">負債比 &lt; <input type="number" name="debt_ratio" step="0.1" value="50" /> %</div>
+    <div class="form-group">近三月漲幅 &gt; <input type="number" name="price_3m" step="0.01" value="0.1" /> , 年化波動 &lt; <input type="number" name="std_1y" step="0.01" value="0.2" /></div>
+    <button type="submit">開始分析與匯出 PDF</button>
+  </form>
+</body>
+</html>
