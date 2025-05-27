@@ -7,7 +7,7 @@ from FinMind.data import DataLoader
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
-FONT_PATH = "fonts/NotoSansTC-Regular.ttf"
+FONT_PATH = "fonts/NotoSansTC.ttf"
 TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNS0wNS0yOCAwMToyODoxMyIsInVzZXJfaWQiOiJqYW1lczkwMTAxNiIsImlwIjoiMTE4LjE1MC42My45OSJ9.QWxBrJYWM_GNDpTyvAyR2frCPwB4e7HP_Kj_KEX2tVs"
 
 @app.route('/')
