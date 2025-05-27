@@ -1,5 +1,7 @@
-
-Flask
+flask
 pandas
-fpdf
+numpy
+yfinance
 FinMind
+tqdm
+fpdf
