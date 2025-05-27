@@ -96,8 +96,14 @@ def analyze():
     # 產出 PDF 報告
     pdf = FPDF()
     pdf.add_page()
-    pdf.add_font('NotoSansTC', '', FONT_PATH, uni=True)
-    pdf.set_font('NotoSansTC', '', 14)
+    try:
+        pdf.add_font('NotoSansTC', '', FONT_PATH, uni=True)
+        pdf.set_font('NotoSansTC', '', 14)
+    except RuntimeError:
+        print("⚠️ 找不到中文字型，改用內建字型（PDF 僅英文顯示）")
+        pdf.set_font('Arial', '', 14)
+
+
     pdf.cell(0, 10, "多因子選股分析結果", ln=True)
 
     if df.empty:
