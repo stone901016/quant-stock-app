@@ -31,7 +31,7 @@ def analyze():
     api.login_by_token(api_token=TOKEN)
 
     stock_list = api.taiwan_stock_info()
-    stock_list = stock_list[(stock_list["type"] == "股票") & (~stock_list["stock_id"].str.startswith("00"))]
+    stock_list = stock_list[stock_list["stock_id"].str.match(r"^[1-9]\d{3}$")]
 
     result_list = []
     today = datetime.today()
