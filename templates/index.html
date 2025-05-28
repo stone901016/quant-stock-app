@@ -1,26 +1,75 @@
-
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>多因子選股系統</title>
   <style>
-    body { font-family: "Microsoft JhengHei", sans-serif; margin: 2rem auto; max-width: 800px; font-size: 1.2rem; }
-    h1 { text-align: center; font-size: 2rem; }
-    label, input { margin: 0.5rem 0; }
-    input[type="number"] { width: 5rem; }
-    .form-group { margin-bottom: 1rem; }
-    button { margin-top: 1rem; padding: 0.5rem 1rem; font-size: 1rem; }
+    body {
+      font-family: 'Microsoft JhengHei', sans-serif;
+      max-width: 800px;
+      margin: 2rem auto;
+      font-size: 1.1rem;
+    }
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+    }
+    input[type="number"] {
+      width: 5rem;
+      margin: 0 0.5rem;
+    }
+    input[type="file"] {
+      margin-bottom: 1rem;
+    }
+    label {
+      display: block;
+      margin-top: 1rem;
+    }
+    .section {
+      margin-bottom: 2rem;
+    }
+    .inline {
+      display: inline-block;
+      margin-right: 1rem;
+    }
+    .note {
+      background-color: #f9f9f9;
+      padding: 1rem;
+      border-left: 4px solid #007bff;
+    }
   </style>
 </head>
 <body>
   <h1>📊 多因子選股系統</h1>
-  <form action="/analyze" method="post">
-    <div class="form-group">PE &lt; <input type="number" name="pe_ratio" step="0.1" value="15" /> , PB &lt; <input type="number" name="pb_ratio" step="0.1" value="1.5" /></div>
-    <div class="form-group">EPS 成長率 &gt; <input type="number" name="eps_growth" step="0.1" value="10" /> % , ROE &gt; <input type="number" name="roe" step="0.1" value="15" /> %</div>
-    <div class="form-group">負債比 &lt; <input type="number" name="debt_ratio" step="0.1" value="50" /> %</div>
-    <div class="form-group">近三月漲幅 &gt; <input type="number" name="price_3m" step="0.01" value="0.1" /> , 年化波動 &lt; <input type="number" name="std_1y" step="0.01" value="0.2" /></div>
-    <button type="submit">開始分析與匯出 PDF</button>
+  <form action="/analyze" method="POST" enctype="multipart/form-data">
+    <div class="section">
+      <label>上傳股票 CSV 檔案：</label>
+      <input type="file" name="file" required>
+    </div>
+
+    <div class="section">
+      <label>自訂選股參數（可選）：</label>
+      <div><span class="inline">PE <input type="number" step="0.1" name="pe_ratio" value="15"> , PB <input type="number" step="0.1" name="pb_ratio" value="1.5"></span></div>
+      <div><span class="inline">EPS 成長率 > <input type="number" step="0.1" name="eps_growth" value="10"> % , ROE > <input type="number" step="0.1" name="roe" value="15"> %</span></div>
+      <div><span class="inline">負債比 < <input type="number" step="0.1" name="debt_ratio" value="50"> %</span></div>
+      <div><span class="inline">近三月漲幅 > <input type="number" step="0.01" name="price_3m" value="0.1"> , 年化波動 < <input type="number" step="0.01" name="std_1y" value="0.2"></span></div>
+    </div>
+
+    <div class="section">
+      <button type="submit">開始分析並匯出 Word</button>
+    </div>
   </form>
+
+  <div class="note">
+    <h3>📌 預設選股策略說明：</h3>
+    <ul>
+      <li>價值：PE < 15 且 PB < 1.5</li>
+      <li>成長：EPS 成長率 > 10%</li>
+      <li>品質：ROE > 15%，負債比 < 50%</li>
+      <li>動能：近三個月報酬率 > 10%</li>
+      <li>波動：年化標準差 < 20%</li>
+    </ul>
+  </div>
 </body>
 </html>
