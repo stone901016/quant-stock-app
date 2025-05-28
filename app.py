@@ -31,7 +31,7 @@ def analyze():
     api.login_by_token(api_token=TOKEN)
 
     stock_list = api.taiwan_stock_info()
-    stock_list = stock_list[stock_list["type"] == "股票"]  # 過濾掉 ETF
+    stock_list = stock_list[(stock_list["type"] == "股票") & (~stock_list["stock_id"].str.startswith("00"))]
 
     result_list = []
     today = datetime.today()
@@ -46,42 +46,43 @@ def analyze():
 
         try:
             price_df = api.taiwan_stock_daily(stock_id=stock_id, start_date=start, end_date=end)
-            fin_df = api.taiwan_stock_financial_statement(
-                stock_id=stock_id,
-                start_date="2023-01-01",
-                end_date="2024-12-31"
-            )
-
-            print(f"➡️ {stock_id} - {stock_name} | 價格筆數: {len(price_df)}, 財報筆數: {len(fin_df)}")
-
-            if price_df.empty or len(price_df) < 65 or fin_df.empty:
+            if price_df.empty or len(price_df) < 65:
                 continue
 
             price_df["return"] = price_df["close"].pct_change()
             std = price_df["return"].std() * (252 ** 0.5)
             pct_3m = (price_df.iloc[-1]["close"] / price_df.iloc[-63]["close"]) - 1
 
+            fin_df = api.taiwan_stock_financial_statement(
+                stock_id=stock_id,
+                start_date="2023-01-01",
+                end_date="2024-12-31"
+            )
+
+            if fin_df.empty:
+                continue
+
             latest = fin_df.iloc[-1]
-            eps_base = latest["EPS"]
+            eps_base = latest.get("EPS", 0)
             eps_target = eps_growth / 100 * eps_base
 
             if (
-                latest["PBR"] < pb_ratio and
-                latest["PER"] < pe_ratio and
+                latest.get("PBR", float("inf")) < pb_ratio and
+                latest.get("PER", float("inf")) < pe_ratio and
                 eps_base > 0 and eps_base > eps_target and
-                latest["ROE"] > roe and
-                latest["DebtRatio"] < debt_ratio and
+                latest.get("ROE", 0) > roe and
+                latest.get("DebtRatio", 100) < debt_ratio and
                 pct_3m > price_3m and
                 std < std_1y
             ):
                 result_list.append({
                     "symbol": stock_id,
                     "name": stock_name,
-                    "pe_ratio": latest["PER"],
-                    "pb_ratio": latest["PBR"],
-                    "eps": latest["EPS"],
-                    "roe": latest["ROE"],
-                    "debt_ratio": latest["DebtRatio"],
+                    "pe_ratio": latest.get("PER"),
+                    "pb_ratio": latest.get("PBR"),
+                    "eps": latest.get("EPS"),
+                    "roe": latest.get("ROE"),
+                    "debt_ratio": latest.get("DebtRatio"),
                     "price_3m": round(pct_3m, 2),
                     "std_1y": round(std, 4)
                 })
