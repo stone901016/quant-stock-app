@@ -7,8 +7,7 @@ from FinMind.data import DataLoader
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
-TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNS0wNS0yOSAxNDoxMzo1NSIsInVzZXJfaWQiOiJqYW1lczkwMTAxNiIsImlwIjoiMTE4LjE1MC42My45OSJ9.Wv0n2gHitSyeo9wm91GJiKXuCUvx0pqZ_fv-npD0Trk"
-CACHE_PATH = "cache/0050_list.csv"
+TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNS0wNS0yOCAwMToyODoxMyIsInVzZXJfaWQiOiJqYW1lczkwMTAxNiIsImlwIjoiMTE4LjE1MC42My45OSJ9.QWxBrJYWM_GNDpTyvAyR2frCPwB4e7HP_Kj_KEX2tVs"
 
 @app.route('/')
 def index():
@@ -28,24 +27,20 @@ def analyze():
     except:
         return "❌ 請輸入正確的數字格式。"
 
-    if os.path.exists(CACHE_PATH):
-        stock_list = pd.read_csv(CACHE_PATH)
-    else:
-        api = DataLoader()
-        api.login_by_token(api_token=TOKEN)
-        try:
-            stock_list = api.taiwan_stock_info()
-            stock_list = stock_list[stock_list["stock_id"].isin([
-                "2330", "2454", "2317", "2308", "2382", "2891", "2881", "2882", "2303", "2412",
-                "2886", "3711", "2884", "1216", "1301", "2002", "2880", "1326", "5871", "2207",
-                "2883", "4938", "2912", "3008", "3034", "3037", "2603", "1101", "6415", "6669",
-                "1590", "3481", "3045", "1402", "2885", "9910", "2357", "2609", "9904", "2345",
-                "2379", "5876", "2301", "2892", "2395", "2408", "6414", "4958", "2801", "9914"
-            ])]
-            os.makedirs("cache", exist_ok=True)
-            stock_list.to_csv(CACHE_PATH, index=False)
-        except Exception as e:
-            return f"❌ 抓取股票清單失敗：{e}"
+    api = DataLoader()
+    api.login_by_token(api_token=TOKEN)
+
+    try:
+        stock_list = api.taiwan_stock_info()
+        stock_list = stock_list[stock_list["stock_id"].isin([
+            "2330", "2454", "2317", "2308", "2382", "2891", "2881", "2882", "2303", "2412",
+            "2886", "3711", "2884", "1216", "1301", "2002", "2880", "1326", "5871", "2207",
+            "2883", "4938", "2912", "3008", "3034", "3037", "2603", "1101", "6415", "6669",
+            "1590", "3481", "3045", "1402", "2885", "9910", "2357", "2609", "9904", "2345",
+            "2379", "5876", "2301", "2892", "2395", "2408", "6414", "4958", "2801", "9914"
+        ])]
+    except Exception as e:
+        return f"❌ 抓取股票清單失敗：{e}"
 
     result_list = []
     today = datetime.today()
@@ -53,9 +48,6 @@ def analyze():
     end = today.strftime("%Y-%m-%d")
 
     print(f"📊 共 {len(stock_list)} 檔股票待分析")
-
-    api = DataLoader()
-    api.login_by_token(api_token=TOKEN)
 
     for _, row in stock_list.iterrows():
         stock_id = row["stock_id"]
@@ -74,27 +66,34 @@ def analyze():
 
             fin_df = api.taiwan_stock_financial_statement(
                 stock_id=stock_id,
-                start_date="2023-01-01",
+                start_date="2022-01-01",
                 end_date="2024-12-31"
             )
 
-            if fin_df.empty:
-                print("❌ 找不到財報資料")
+            if fin_df.empty or "EPS" not in fin_df.columns:
+                print("❌ 找不到財報資料或缺少欄位")
                 continue
 
-            latest = fin_df.iloc[-1]
-            eps_base = latest.get("EPS", 0)
+            fin_df = fin_df.sort_values("date", ascending=False)
+            recent_4q = fin_df.head(4)
+
+            eps_base = recent_4q["EPS"].sum()
+            roe = recent_4q["ROE"].mean()
+            debt_ratio_val = recent_4q["DebtRatio"].mean()
+            pe_val = recent_4q["PER"].mean()
+            pb_val = recent_4q["PBR"].mean()
+
             eps_target = eps_growth / 100 * eps_base
 
             print(f"📉 近3月報酬率: {pct_3m:.2%}, 年化波動: {std:.2%}")
-            print(f"📊 財報資料: PER={latest.get('PER')}, PBR={latest.get('PBR')}, EPS={eps_base}, ROE={latest.get('ROE')}, 負債比={latest.get('DebtRatio')}")
+            print(f"📊 財報資料: PER={pe_val}, PBR={pb_val}, EPS={eps_base}, ROE={roe}, 負債比={debt_ratio_val}")
 
             if (
-                latest.get("PBR", float("inf")) < pb_ratio and
-                latest.get("PER", float("inf")) < pe_ratio and
+                pb_val < pb_ratio and
+                pe_val < pe_ratio and
                 eps_base > 0 and eps_base > eps_target and
-                latest.get("ROE", 0) > roe and
-                latest.get("DebtRatio", 100) < debt_ratio and
+                roe > roe and
+                debt_ratio_val < debt_ratio and
                 pct_3m > price_3m and
                 std < std_1y
             ):
@@ -102,11 +101,11 @@ def analyze():
                 result_list.append({
                     "symbol": stock_id,
                     "name": stock_name,
-                    "pe_ratio": latest.get("PER"),
-                    "pb_ratio": latest.get("PBR"),
-                    "eps": latest.get("EPS"),
-                    "roe": latest.get("ROE"),
-                    "debt_ratio": latest.get("DebtRatio"),
+                    "pe_ratio": pe_val,
+                    "pb_ratio": pb_val,
+                    "eps": eps_base,
+                    "roe": roe,
+                    "debt_ratio": debt_ratio_val,
                     "price_3m": round(pct_3m, 2),
                     "std_1y": round(std, 4)
                 })
