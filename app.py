@@ -7,7 +7,7 @@ from FinMind.data import DataLoader
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
-TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNS0wNS0yOCAwMToyODoxMyIsInVzZXJfaWQiOiJqYW1lczkwMTAxNiIsImlwIjoiMTE4LjE1MC42My45OSJ9.QWxBrJYWM_GNDpTyvAyR2frCPwB4e7HP_Kj_KEX2tVs"
+TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNS0wNS0yOSAxNDoxMzo1NSIsInVzZXJfaWQiOiJqYW1lczkwMTAxNiIsImlwIjoiMTE4LjE1MC42My45OSJ9.Wv0n2gHitSyeo9wm91GJiKXuCUvx0pqZ_fv-npD0Trk"
 
 @app.route('/')
 def index():
@@ -20,7 +20,7 @@ def analyze():
         pe_ratio = float(request.form.get("pe_ratio", 15))
         pb_ratio = float(request.form.get("pb_ratio", 1.5))
         eps_growth = float(request.form.get("eps_growth", 10))
-        roe = float(request.form.get("roe", 15))
+        roe_threshold = float(request.form.get("roe", 15))
         debt_ratio = float(request.form.get("debt_ratio", 50))
         price_3m = float(request.form.get("price_3m", 0.1))
         std_1y = float(request.form.get("std_1y", 0.2))
@@ -70,29 +70,29 @@ def analyze():
                 end_date="2024-12-31"
             )
 
-            if fin_df.empty or "EPS" not in fin_df.columns:
-                print("❌ 找不到財報資料或缺少欄位")
+            if fin_df.empty or not set(["EPS", "ROE", "DebtRatio", "PER", "PBR"]).issubset(fin_df.columns):
+                print("❌ 找不到完整財報資料或欄位")
                 continue
 
             fin_df = fin_df.sort_values("date", ascending=False)
             recent_4q = fin_df.head(4)
 
-            eps_base = recent_4q["EPS"].sum()
-            roe = recent_4q["ROE"].mean()
-            debt_ratio_val = recent_4q["DebtRatio"].mean()
-            pe_val = recent_4q["PER"].mean()
-            pb_val = recent_4q["PBR"].mean()
+            eps_base = recent_4q["EPS"].sum(skipna=True)
+            roe_val = recent_4q["ROE"].mean(skipna=True)
+            debt_ratio_val = recent_4q["DebtRatio"].mean(skipna=True)
+            pe_val = recent_4q["PER"].mean(skipna=True)
+            pb_val = recent_4q["PBR"].mean(skipna=True)
 
             eps_target = eps_growth / 100 * eps_base
 
             print(f"📉 近3月報酬率: {pct_3m:.2%}, 年化波動: {std:.2%}")
-            print(f"📊 財報資料: PER={pe_val}, PBR={pb_val}, EPS={eps_base}, ROE={roe}, 負債比={debt_ratio_val}")
+            print(f"📊 財報資料: PER={pe_val}, PBR={pb_val}, EPS={eps_base}, ROE={roe_val}, 負債比={debt_ratio_val}")
 
             if (
                 pb_val < pb_ratio and
                 pe_val < pe_ratio and
                 eps_base > 0 and eps_base > eps_target and
-                roe > roe and
+                roe_val > roe_threshold and
                 debt_ratio_val < debt_ratio and
                 pct_3m > price_3m and
                 std < std_1y
@@ -104,7 +104,7 @@ def analyze():
                     "pe_ratio": pe_val,
                     "pb_ratio": pb_val,
                     "eps": eps_base,
-                    "roe": roe,
+                    "roe": roe_val,
                     "debt_ratio": debt_ratio_val,
                     "price_3m": round(pct_3m, 2),
                     "std_1y": round(std, 4)
