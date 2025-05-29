@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNS0wNS0yOSAxNDoxMzo1NSIsInVzZXJfaWQiOiJqYW1lczkwMTAxNiIsImlwIjoiMTE4LjE1MC42My45OSJ9.Wv0n2gHitSyeo9wm91GJiKXuCUvx0pqZ_fv-npD0Trk"
+CACHE_PATH = "cache/0050_list.csv"
 
 @app.route('/')
 def index():
@@ -27,20 +28,24 @@ def analyze():
     except:
         return "❌ 請輸入正確的數字格式。"
 
-    api = DataLoader()
-    api.login_by_token(api_token=TOKEN)
-
-    try:
-        stock_list = api.taiwan_stock_info()
-        stock_list = stock_list[stock_list["stock_id"].isin([
-            "2330", "2454", "2317", "2308", "2382", "2891", "2881", "2882", "2303", "2412",
-            "2886", "3711", "2884", "1216", "1301", "2002", "2880", "1326", "5871", "2207",
-            "2883", "4938", "2912", "3008", "3034", "3037", "2603", "1101", "6415", "6669",
-            "1590", "3481", "3045", "1402", "2885", "9910", "2357", "2609", "9904", "2345",
-            "2379", "5876", "2301", "2892", "2395", "2408", "6414", "4958", "2801", "9914"
-        ])]
-    except Exception as e:
-        return f"❌ 抓取股票清單失敗：{e}"
+    if os.path.exists(CACHE_PATH):
+        stock_list = pd.read_csv(CACHE_PATH)
+    else:
+        api = DataLoader()
+        api.login_by_token(api_token=TOKEN)
+        try:
+            stock_list = api.taiwan_stock_info()
+            stock_list = stock_list[stock_list["stock_id"].isin([
+                "2330", "2454", "2317", "2308", "2382", "2891", "2881", "2882", "2303", "2412",
+                "2886", "3711", "2884", "1216", "1301", "2002", "2880", "1326", "5871", "2207",
+                "2883", "4938", "2912", "3008", "3034", "3037", "2603", "1101", "6415", "6669",
+                "1590", "3481", "3045", "1402", "2885", "9910", "2357", "2609", "9904", "2345",
+                "2379", "5876", "2301", "2892", "2395", "2408", "6414", "4958", "2801", "9914"
+            ])]
+            os.makedirs("cache", exist_ok=True)
+            stock_list.to_csv(CACHE_PATH, index=False)
+        except Exception as e:
+            return f"❌ 抓取股票清單失敗：{e}"
 
     result_list = []
     today = datetime.today()
@@ -48,6 +53,9 @@ def analyze():
     end = today.strftime("%Y-%m-%d")
 
     print(f"📊 共 {len(stock_list)} 檔股票待分析")
+
+    api = DataLoader()
+    api.login_by_token(api_token=TOKEN)
 
     for _, row in stock_list.iterrows():
         stock_id = row["stock_id"]
