@@ -7,7 +7,7 @@ from FinMind.data import DataLoader
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
-TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNS0wNS0yOSAxNDoxMzo1NSIsInVzZXJfaWQiOiJqYW1lczkwMTAxNiIsImlwIjoiMTE4LjE1MC42My45OSJ9.Wv0n2gHitSyeo9wm91GJiKXuCUvx0pqZ_fv-npD0Trk"
+TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNS0wNS0yOCAwMToyODoxMyIsInVzZXJfaWQiOiJqYW1lczkwMTAxNiIsImlwIjoiMTE4LjE1MC42My45OSJ9.QWxBrJYWM_GNDpTyvAyR2frCPwB4e7HP_Kj_KEX2tVs"
 
 @app.route('/')
 def index():
@@ -51,8 +51,10 @@ def analyze():
         stock_name = row["stock_name"]
 
         try:
+            print(f"🔍 正在分析 {stock_id} - {stock_name}")
             price_df = api.taiwan_stock_daily(stock_id=stock_id, start_date=start, end_date=end)
             if price_df.empty or len(price_df) < 65:
+                print("❌ 價格資料不足")
                 continue
 
             price_df["return"] = price_df["close"].pct_change()
@@ -66,11 +68,15 @@ def analyze():
             )
 
             if fin_df.empty:
+                print("❌ 找不到財報資料")
                 continue
 
             latest = fin_df.iloc[-1]
             eps_base = latest.get("EPS", 0)
             eps_target = eps_growth / 100 * eps_base
+
+            print(f"📉 近3月報酬率: {pct_3m:.2%}, 年化波動: {std:.2%}")
+            print(f"📊 財報資料: PER={latest.get('PER')}, PBR={latest.get('PBR')}, EPS={eps_base}, ROE={latest.get('ROE')}, 負債比={latest.get('DebtRatio')}")
 
             if (
                 latest.get("PBR", float("inf")) < pb_ratio and
@@ -81,6 +87,7 @@ def analyze():
                 pct_3m > price_3m and
                 std < std_1y
             ):
+                print(f"✅ {stock_id} 通過條件")
                 result_list.append({
                     "symbol": stock_id,
                     "name": stock_name,
